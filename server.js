@@ -1,17 +1,18 @@
 const express = require('express');
 const path = require('path');
+const { createCSV } = require('./fetch');
 
 const app = express();
-const PORT = process.env.PORT || 8000; // Choose a port for your server
+const PORT = 8000; // Choose a port for your server
 
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, 'frontend', 'build')));
 
 // API routes or other backend logic
-app.get('/api/data', (req, res) => {
-  // Handle API requests here
-  res.json({ message: 'This is a sample API endpoint' });
+app.get('/api/data', async (req, res) => {
+  await createCSV(res, req.query.startDate, req.query.endDate);
 });
+
 
 // Catch-all handler for React's client-side routing
 app.get('*', (req, res) => {
