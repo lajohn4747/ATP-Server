@@ -148,7 +148,7 @@ async function createCSV(res, startDate, endDate) {
     // Create a CSV writer
     const csvWriter = createObjectCsvWriter({
         path: `output.csv`,
-        header: getColumnFields()
+        header:  getColumnFields().map(header => ({ id: header, title: header }))
     });
 
     csvWriter.writeRecords(allData)
@@ -160,20 +160,22 @@ async function createCSV(res, startDate, endDate) {
             // Pipe the CSV file to the response
             const fileStream = fs.createReadStream(`output.csv`);
             fileStream.pipe(res);
+
+            // After sending the file, delete it
+            fileStream.on('end', () => {
+                const filePath = path.join(__dirname, 'output.csv');
+                fs.unlink(filePath, (err) => {
+                    if (err) {
+                        console.error('Error deleting file:', err);
+                    } else {
+                        console.log('File deleted successfully');
+                    }
+                });
+            });
         })
         .catch(err => {
             console.error('Error writing CSV file:', err);
             res.status(500).send('Internal Server Error');
-        })
-        .finally(() => {
-            const filePath = path.join(__dirname, 'output.csv'); // Path to the generated CSV file
-            fs.unlink(filePath, (err) => {
-                if (err) {
-                    console.error('Error deleting file:', err);
-                } else {
-                    console.log('File deleted successfully');
-                }
-            });
         })
 
 }

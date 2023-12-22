@@ -17,7 +17,7 @@ export function DateInput({ labelText, onChangeMethod }) {
 
   return (
     <div>
-      <label htmlFor="dateInput">{labelText} (YYYY-MM-DD): </label>
+      <label htmlFor="dateInput">{labelText}: </label>
       <input
         id="dateInput"
         type="date"
