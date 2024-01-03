@@ -106,7 +106,6 @@ async function createCSV(res, startDate, endDate) {
             let currentPage = 1
             while (currentPage <= totalPages) {
                 let params = { 'startDate': dates[i], 'endDate': dates[i + 1], 'pageNumber': currentPage.toString() };
-                console.log(params)
 
                 let response;
                 try {
@@ -144,40 +143,45 @@ async function createCSV(res, startDate, endDate) {
         allData.push(data)
     }
 
-
     // Create a CSV writer
     const csvWriter = createObjectCsvWriter({
-        path: `output.csv`,
-        header:  getColumnFields().map(header => ({ id: header, title: header }))
+        path: `${startDate}-${endDate}.csv`,
+        header: getColumnFields().map(header => ({ id: header, title: header }))
     });
 
-    csvWriter.writeRecords(allData)
-        .then(() => {
-            // Set response headers for file download
-            res.setHeader('Content-Disposition', 'attachment; filename="output.csv"');
-            res.setHeader('Content-Type', 'text/csv');
+    await csvWriter.writeRecords(allData);
+    console.log("Complete");
+    global.creatingCSV = true;
+}
 
-            // Pipe the CSV file to the response
-            const fileStream = fs.createReadStream(`output.csv`);
-            fileStream.pipe(res);
+async function sendFile(res, fileName) {
+    // Check if the file exists
+    fs.access(fileName, fs.constants.F_OK, (err) => {
+        if (err) {
+            res.writeHead(404, { 'Content-Type': 'text/plain' });
+            res.end('File not found');
+            return;
+        }
 
-            // After sending the file, delete it
-            fileStream.on('end', () => {
-                const filePath = path.join(__dirname, 'output.csv');
-                fs.unlink(filePath, (err) => {
-                    if (err) {
-                        console.error('Error deleting file:', err);
-                    } else {
-                        console.log('File deleted successfully');
-                    }
-                });
+        // Read the file and send it in the response
+        const fileStream = fs.createReadStream(fileName);
+        res.setHeader('Content-disposition', `attachment; filename=${fileName}`);
+        res.setHeader('Content-type', 'application/octet-stream');
+
+        fileStream.pipe(res);
+
+        // After sending the file, delete it
+        fileStream.on('end', () => {
+            const filePath = path.join(__dirname, fileName);
+            fs.unlink(filePath, (err) => {
+                if (err) {
+                    console.error('Error deleting file:', err);
+                } else {
+                    console.log('File deleted successfully');
+                }
             });
-        })
-        .catch(err => {
-            console.error('Error writing CSV file:', err);
-            res.status(500).send('Internal Server Error');
-        })
-
+        });
+    });
 }
 
 // Define getColumnFields function here
@@ -201,4 +205,4 @@ function getColumnFields() {
 }
 
 
-module.exports = { createCSV }
+module.exports = { createCSV, sendFile }
