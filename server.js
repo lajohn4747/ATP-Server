@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { createCSV, sendFile } = require('./fetch');
+const { createCSV, createSalesCSV, sendFile } = require('./fetch');
 
 const app = express();
 const PORT = 8000; // Choose a port for your server
@@ -18,10 +18,18 @@ app.get('/api/create_data', async (req, res) => {
 });
 
 // API routes or other backend logic
+app.get('/api/get_sales_mix_data', async (req, res) => {
+  createSalesCSV(res, req.query.startDate, req.query.endDate);
+  console.log(`Creating CSV is: ${global.creatingCSV}`);
+  res.status(200).json({ status: 'success', message: `${req.query.startDate}-${req.query.endDate}.csv` });
+});
+
+// API routes or other backend logic
 app.get('/api/get_file', async (req, res) => {
   console.log(`Checking CSV is: ${global.creatingCSV}`);
   if (global.creatingCSV) {
-    await sendFile(res, req.query.fileName)
+    console.log(`Filename is: ${req.query.fileName}`);
+    await sendFile(res, req.query.fileName);
     global.creatingCSV = false;
   } else {
     console.log("Not Ready")

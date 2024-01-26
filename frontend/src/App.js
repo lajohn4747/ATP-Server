@@ -33,6 +33,7 @@ function App() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(false); // Loading state
+  const [fileName, setFileName] = useState('');
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -47,13 +48,15 @@ function App() {
 
   const fetchData = async () => {
     try {
-      const response = await fetch(`/api/get_file?fileName=${startDate}-${endDate}.csv`); // Replace with your server endpoint
+      let url = `/api/get_file?fileName=${fileName}`
+      const response = await fetch(url);
+      console.log(url)
       if (response.status == 200) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(new Blob([blob]));
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', `${startDate}-${endDate}.csv`);
+        link.setAttribute('download', fileName);
         document.body.appendChild(link);
         link.click();
         link.parentNode.removeChild(link);
@@ -71,7 +74,26 @@ function App() {
     console.log(endDate)
     if (startDate && endDate) {
       try {
+        let fileName = `${startDate}-${endDate}.csv`
+        setFileName(fileName)
         fetch(`/api/create_data?startDate=${startDate}&endDate=${endDate}`);
+        setLoading(true);
+      } catch (error) {
+        console.error('Error:', error.message);
+      }
+    } else {
+      console.error('Please select both start and end dates');
+    }
+  };
+
+  const handleSalesClick = async () => {
+    console.log(startDate)
+    console.log(endDate)
+    if (startDate && endDate) {
+      try {
+        let fileName = `sales-mix-${startDate}-${endDate}.csv`
+        setFileName(fileName)
+        fetch(`/api/get_sales_mix_data?startDate=${startDate}&endDate=${endDate}`);
         setLoading(true);
       } catch (error) {
         console.error('Error:', error.message);
@@ -93,7 +115,8 @@ function App() {
         <div style={{ marginBottom: '20px' }}>
           <DateInput disabled={loading} labelText="Enter End Date: " value={endDate} onChangeMethod={(value) => setEndDate(value)} />
         </div>
-        <button disabled={loading} onClick={handleButtonClick}>Send Request</button>
+        <button disabled={loading} onClick={handleButtonClick}>Get Location Metrics</button>
+        <button disabled={loading} onClick={handleSalesClick}>Get Sales Mix</button>
       </div>
       {/* Display loading message while loading is true */}
       {loading && (

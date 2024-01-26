@@ -1,5 +1,6 @@
 const { response } = require('express');
 const { name_mapping } = require('./name_mapping');
+const { reporting_category_map } = require('./product_mapping')
 const { default: axios, all } = require('axios');
 const moment = require('moment');
 const { createObjectCsvWriter } = require('csv-writer');
@@ -53,6 +54,102 @@ function iterateDates(startDate, endDate) {
     currentDate = currentDate.clone().add(1, 'days');
 
     return dates;
+}
+
+async function createSalesCSV(res, startDate, endDate) {
+    if (!startDate || !endDate) {
+        console.log('No start date or end date');
+        res.json({ message: 'Bad dates', startDate, endDate });
+        return;
+    }
+    const dates = iterateDates(startDate, endDate);
+
+    let allData = []
+
+    for (let location in name_mapping) {
+        console.log(`Processing data for: ${location}`)
+
+        const data = {
+            location: location,
+            'Alternative Revenue': 0.0,
+            Memberships: 0.0,
+            'Gift Card': 0.0,
+            Merchandise: 0.0,
+            'Charitable Collections': 0.0,
+            Groups: 0.0,
+            Beverages: 0.0,
+            Parties: 0.0,
+            Apparel: 0.0,
+            Jumptime: 0.0,
+            Food: 0.0,
+            'Not Labeled': 0.0,
+            'Total Net Revenue': 0.0
+        };
+
+        let headers;
+        try {
+            headers = await getAuthToken(data.location);
+            if (headers.Authorization.contain) {
+                console.log(`Authorization Code not retrieved for ${location}. Skipping`);
+                continue;
+            }
+        } catch (error) {
+            console.log(`Error getting authorization for ${location}. Skipping`);
+            continue;
+        }
+
+        subgroup = reporting_category_map[location]
+
+        for (let i = 0; i < dates.length; i++) {
+            if (i >= dates.length - 1) {
+                continue;
+            }
+            console.log(`Handling: ${dates[i]}`)
+            let totalPages = 1
+            let currentPage = 1
+            while (currentPage <= totalPages) {
+                let params = { 'startDate': dates[i], 'endDate': dates[i + 1], 'pageNumber': currentPage.toString() };
+
+                let response;
+                try {
+                    response = await axios.get(revenue_url, {
+                        headers: headers,
+                        params: params
+                    })
+                } catch (error) {
+                    console.log('JOHN Error');
+                    console.log(error);
+
+                }
+
+                const json_data = response.data
+                const items = json_data['items']
+                currentPage += 1
+                totalPages = parseInt(json_data['totalPages'])
+                for (const i in items) {
+                    datapoint = subgroup[items[i].productId]
+                    if (datapoint in data) {
+                        data[datapoint] += parseFloat(items[i].netRevenue)
+                    } else {
+                        data[datapoint] = parseFloat(items[i].netRevenue)
+                    }
+                    data["Total Net Revenue"] += parseFloat(items[i].netRevenue)
+                }
+            }
+        }
+
+        allData.push(data)
+    }
+
+    // Create a CSV writer
+    const csvWriter = createObjectCsvWriter({
+        path: `sales-mix-${startDate}-${endDate}.csv`,
+        header: getSalesMixColumnFields().map(header => ({ id: header, title: header }))
+    });
+
+    await csvWriter.writeRecords(allData);
+    console.log("Complete Sales");
+    global.creatingCSV = true;
 }
 
 async function createCSV(res, startDate, endDate) {
@@ -204,5 +301,23 @@ function getColumnFields() {
     ];
 }
 
+function getSalesMixColumnFields() {
+    return [
+        'location',
+        'Alternative Revenue',
+        'Memberships',
+        'Gift Card',
+        'Merchandise',
+        'Charitable Collections',
+        'Groups',
+        'Beverages',
+        'Parties',
+        'Apparel',
+        'Jumptime',
+        'Food',
+        'Not Labeled',
+        'Total Net Revenue'
+    ]
+}
 
-module.exports = { createCSV, sendFile }
+module.exports = { createCSV, createSalesCSV, sendFile }
