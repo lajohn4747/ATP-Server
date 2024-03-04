@@ -62,7 +62,8 @@ function App() {
         link.parentNode.removeChild(link);
         setLoading(false)
       } else {
-        console.error('Failed to fetch data:', response.message);
+        let message = await response.json()
+        console.log('Failed to fetch data:', message);
       }
     } catch (error) {
       console.error('Error fetching data:', error);

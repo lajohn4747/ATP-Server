@@ -117,9 +117,8 @@ async function createSalesCSV(res, startDate, endDate) {
                         params: params
                     })
                 } catch (error) {
-                    console.log('JOHN Error');
                     console.log(error);
-
+                    break;
                 }
 
                 const json_data = response.data
@@ -213,7 +212,7 @@ async function createCSV(res, startDate, endDate) {
                 } catch (error) {
                     console.log('JOHN Error');
                     console.log(error);
-
+                    break;
                 }
 
                 const json_data = response.data
